@@ -58,6 +58,7 @@ USE_TZ = True
 STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_URL = '/api/login/'
+LOGIN_REDIRECT_URL = '/api/task-gallery/'
 
 from decouple import config
 SECRET_KEY = config('SECRET_KEY')
