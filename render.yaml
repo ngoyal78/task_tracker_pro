@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: task-tracker-pro
+    env: python
+    buildCommand: |
+      pip install -r requirements.txt
+      python manage.py collectstatic --noinput
+      python manage.py migrate
+    startCommand: gunicorn task_tracker_pro.wsgi:application --bind 0.0.0.0:8000
+    envVars:
+      - key: DJANGO_SETTINGS_MODULE
+        value: task_tracker_pro.settings
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: "task-tracker-pro.onrender.com"
+      # Add your database credentials or use Render Postgres service
+
+databases:
+  - name: task-tracker-db
+    databaseName: task_tracker
+    user: task_user
