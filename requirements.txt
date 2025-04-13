@@ -1,0 +1,8 @@
+Django>=4.2,<5.0
+gunicorn
+psycopg2-binary
+whitenoise
+dj-database-url
+python-dotenv
+python-decouple  # <== Add this line
+djangorestframework==3.14.0

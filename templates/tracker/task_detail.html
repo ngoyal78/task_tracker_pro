@@ -1,0 +1,66 @@
+{% extends 'tracker/base_generic.html' %}
+
+{% block title %}Task Details{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="task-detail bg-white p-4 rounded shadow-sm">
+        <h2 class="text-primary">{{ task.title }}</h2>
+
+        <p><strong>Description:</strong> {{ task.description }}</p>
+        <p><strong>Priority:</strong> {{ task.get_priority_display }}</p>
+        <p><strong>Status:</strong> {{ task.get_status_display }}</p>
+        <p><strong>Due Date:</strong> {{ task.due_date }}</p>
+        <p><strong>Category:</strong> {{ task.category.name }}</p>
+
+        <p><strong>Assigned To:</strong>
+            {% if task.assigned_to.all %}
+                <ul>
+                    {% for user in task.assigned_to.all %}
+                        <li>{{ user.username }}</li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                Not assigned
+            {% endif %}
+        </p>
+
+        <p><strong>Assigned By:</strong>
+          {% if task.assigned_by %}
+              {{ task.assigned_by.username }}
+          {% else %}
+              N/A
+          {% endif %}
+      </p>
+      
+      <p><strong>Created By:</strong>
+          {% if task.created_by %}
+              {{ task.created_by.username }}
+          {% else %}
+              N/A
+          {% endif %}
+      </p>
+
+        {% if task.comments %}
+            <p><strong>Comments:</strong><br>{{ task.comments|linebreaks }}</p>
+        {% endif %}
+
+        {% if task.attachments %}
+            <p><strong>Attachment:</strong>
+                <a href="{{ task.attachments.url }}" download>{{ task.attachments.name }}</a>
+            </p>
+        {% endif %}
+
+        {% if task.history_log %}
+            <p><strong>History Log:</strong><br><pre class="bg-light p-2 rounded">{{ task.history_log }}</pre></p>
+        {% endif %}
+
+        <div class="actions mt-4">
+            {% if user in task.assigned_to.all %}
+                <a href="{% url 'task_edit' task.id %}" class="btn btn-success">Edit Task</a>
+            {% endif %}
+            <a href="{% url 'dashboard' %}" class="btn btn-secondary ml-2">Back to Dashboard</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

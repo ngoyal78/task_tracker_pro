@@ -1,0 +1,73 @@
+{% extends 'tracker/base_generic.html' %}
+
+{% block title %}Task Gallery{% endblock %}
+
+{% block content %}
+<div class="container-fluid mt-4">
+  <div class="row">
+    
+    <!-- Left column: Task Cards -->
+    <div class="col-md-4 mb-3" style="max-height: 80vh; overflow-y: auto;">
+      <h4 class="mb-3">Tasks</h4>
+      {% for task in tasks %}
+        <div class="card mb-3 {% if selected_task and selected_task.id == task.id %}border-primary{% endif %}">
+          <div class="card-body">
+            <h5 class="card-title">{{ task.title }}</h5>
+            <p class="mb-1"><strong>Priority:</strong> {{ task.priority }}</p>
+            <p class="mb-1"><strong>Status:</strong> {{ task.status }}</p>
+            <p class="mb-1"><strong>Due:</strong> {{ task.due_date }}</p>
+            <p class="mb-1"><strong>Category:</strong> {{ task.category.name }}</p>
+            <a href="?selected={{ task.id }}" class="btn btn-sm btn-outline-primary mt-2">View Details</a>
+          </div>
+        </div>
+      {% empty %}
+        <p>No tasks available.</p>
+      {% endfor %}
+    </div>
+
+<!-- Right column: Task Details -->
+<div class="col-md-8">
+    {% if selected_task %}
+      <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white">
+          <h4 class="mb-0">{{ selected_task.title }}</h4>
+        </div>
+        <div class="card-body">
+          <p><strong>Description:</strong> {{ selected_task.description }}</p>
+          <p><strong>Priority:</strong> {{ selected_task.priority }}</p>
+          <p><strong>Status:</strong> {{ selected_task.status }}</p>
+          <p><strong>Due Date:</strong> {{ selected_task.due_date }}</p>
+          <p><strong>Category:</strong> {{ selected_task.category.name }}</p>
+          <p><strong>Assigned To:</strong>
+            {% if selected_task.assigned_to.all %}
+              <ul>
+                {% for user in selected_task.assigned_to.all %}
+                  <li>{{ user.username }}</li>
+                {% endfor %}
+              </ul>
+            {% else %}
+              Not assigned
+            {% endif %}
+          </p>
+          <p><strong>Assigned By:</strong> {{ selected_task.assigned_by.username|default:"N/A" }}</p>
+          <p><strong>Created By:</strong> {{ selected_task.created_by.username|default:"N/A" }}</p>
+          {% if selected_task.attachments %}
+            <p><strong>Attachment:</strong> 
+              <a href="{{ selected_task.attachments.url }}" target="_blank">Download</a>
+            </p>
+          {% endif %}
+          {% if selected_task.comments %}
+            <p><strong>Comments:</strong> {{ selected_task.comments }}</p>
+          {% endif %}
+  
+          <!-- ✅ Edit Button -->
+          <a href="{% url 'task_edit' selected_task.id %}" class="btn btn-success mt-3">Edit Task</a>
+        </div>
+      </div>
+    {% else %}
+      <div class="text-muted">
+        <p>Select a task to view details.</p>
+      </div>
+    {% endif %}
+</div>
+{% endblock %}

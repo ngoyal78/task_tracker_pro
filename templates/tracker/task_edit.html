@@ -1,0 +1,81 @@
+{% extends 'tracker/base_generic.html' %}
+{% block content %}
+  <div class="container">
+    <h2>Edit Task: {{ task.title }}</h2>
+    <form method="post">
+      {% csrf_token %}
+      <div class="form-group">
+        <label for="title">Task Title:</label>
+        <input type="text" class="form-control" id="title" name="title" value="{{ task.title }}" required>
+      </div>
+
+      <div class="form-group">
+        <label for="description">Description:</label>
+        <textarea class="form-control" id="description" name="description" rows="4" required>{{ task.description }}</textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="category">Category:</label>
+        <select class="form-control" id="category" name="category" required>
+          {% for category in categories %}
+            <option value="{{ category.id }}" {% if category.id == task.category.id %}selected{% endif %}>{{ category.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="priority">Priority:</label>
+        <select class="form-control" id="priority" name="priority" required>
+          <option value="Low" {% if task.priority == 'Low' %}selected{% endif %}>Low</option>
+          <option value="Medium" {% if task.priority == 'Medium' %}selected{% endif %}>Medium</option>
+          <option value="High" {% if task.priority == 'High' %}selected{% endif %}>High</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="due_date">Due Date:</label>
+        <input type="date" class="form-control" id="due_date" name="due_date" value="{{ task.due_date|date:'Y-m-d' }}" required>
+      </div>
+
+      <div class="form-group">
+        <label for="status">Status:</label>
+        <select class="form-control" id="status" name="status" required>
+          <option value="Not Started" {% if task.status == 'Not Started' %}selected{% endif %}>Not Started</option>
+          <option value="In Progress" {% if task.status == 'In Progress' %}selected{% endif %}>In Progress</option>
+          <option value="Submitted for Approval" {% if task.status == 'Submitted for Approval' %}selected{% endif %}>Submitted for Approval</option>
+          <option value="Approved" {% if task.status == 'Approved' %}selected{% endif %}>Approved</option>
+          <option value="Reassigned" {% if task.status == 'Reassigned' %}selected{% endif %}>Reassigned</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="assigned_to">Assign To:</label>
+        <select class="form-control" id="assigned_to" name="assigned_to" multiple {% if not can_edit_assignee %}disabled{% endif %}>
+          {% for user in users %}
+            <option value="{{ user.id }}" {% if user in task.assigned_to.all %}selected{% endif %}>{{ user.username }}</option>
+          {% endfor %}
+        </select>
+        {% if not can_edit_assignee %}
+          <input type="hidden" name="assigned_to" value="{{ task.assigned_to.all|join:',' }}">
+        {% endif %}
+      </div>
+
+      <div class="form-group">
+        <label for="comments">Comments:</label>
+        <textarea class="form-control" id="comments" name="comments" rows="4">{{ task.comments }}</textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="attachments">Attachments:</label>
+        <input type="file" class="form-control-file" id="attachments" name="attachments">
+        {% if task.attachments %}
+          <a href="{{ task.attachments.url }}" target="_blank">View current attachment</a>
+        {% endif %}
+      </div>
+
+      <button type="submit" class="btn btn-primary">Save Changes</button>
+    </form>
+    <br>
+    <a href="{% url 'dashboard' %}" class="btn btn-secondary">Back to Dashboard</a>
+  </div>
+{% endblock %}
