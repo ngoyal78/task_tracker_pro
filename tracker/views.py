@@ -46,6 +46,9 @@ def user_login(request):
             return render(request, 'tracker/login.html', {'error': 'Invalid credentials'})
     return render(request, 'tracker/login.html')
 
+def redirect_to_login(request):
+    return redirect('/api/login/')
+
 def user_logout(request):
     logout(request)
     return redirect('login')
