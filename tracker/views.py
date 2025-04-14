@@ -166,3 +166,29 @@ def task_gallery_view(request):
         'tasks': tasks,
         'selected_task': selected_task
     })
+
+from django.shortcuts import render
+from .models import Category, Task
+
+@login_required
+def task_gallery_view2(request):
+    selected_category_id = request.GET.get('category')
+    
+    categories = Category.objects.all()
+    tasks = Task.objects.filter(category_id=selected_category_id) if selected_category_id else []
+
+    category_data = []
+    for cat in categories:
+        count = Task.objects.filter(category=cat).exclude(status='Approved').count()
+        category_data.append({
+            'id': cat.id,
+            'name': cat.name,
+            'pending_count': count
+        })
+
+    context = {
+        'categories': category_data,
+        'tasks': tasks,
+        'selected_category_id': int(selected_category_id) if selected_category_id else None
+    }
+    return render(request, 'tracker/task_gallery2.html', context)

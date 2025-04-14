@@ -1,7 +1,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import TaskViewSet, CategoryViewSet, RoleViewSet
-from .views import user_login, user_logout, dashboard, register, update_task_status, task_detail, task_edit,task_create,task_gallery_view  # Add the register view
+from .views import user_login, user_logout, dashboard, register, update_task_status, task_detail, task_edit,task_create,task_gallery_view,task_gallery_view2  # Add the register view
 
 router = DefaultRouter()
 router.register(r'tasks', TaskViewSet)
@@ -23,4 +23,5 @@ urlpatterns += [
     path('task/<int:task_id>/edit/', task_edit, name='task_edit'),
     path('task/create/', task_create, name='task_create'),
     path('task-gallery/', task_gallery_view, name='task_gallery'),
+    path('task-gallery2/', task_gallery_view2, name='task_gallery2'),
 ]
