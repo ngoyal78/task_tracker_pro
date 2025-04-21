@@ -25,7 +25,12 @@
                         <td>{{ task.title }}</td>
                         <td>{{ task.priority }}</td>
                         <td>{{ task.status }}</td>
-                        <td>{{ task.due_date }}</td>
+                        <td>
+                            {{ task.due_date }}
+                            {% if task.is_overdue %}
+                                <span class="badge bg-danger">Overdue</span>
+                            {% endif %}
+                        </td>
                         <td>{{ task.category.name }}</td>
                         <td>
                             <a href="{% url 'task_detail' task.id %}" class="btn btn-primary btn-sm">View</a>

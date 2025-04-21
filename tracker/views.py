@@ -8,6 +8,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
 from django.views.decorators.http import require_POST
 from .forms import TaskForm  # We will create a form for this
+from datetime import date
 
 class TaskViewSet(viewsets.ModelViewSet):
     queryset = Task.objects.all()
@@ -64,6 +65,9 @@ def dashboard(request):
     else:
         tasks = Task.objects.filter(assigned_to=request.user)
 
+    for task in tasks:
+        task.is_overdue = task.due_date < date.today()
+
     context = {
         'tasks': tasks,
         'is_admin': is_admin,
@@ -99,6 +103,55 @@ def task_detail(request, task_id):
     return render(request, 'tracker/task_detail.html', {'task': task})
 
 @login_required
+def task_edit(request, task_id):
+    task = get_object_or_404(Task, id=task_id)
+    categories = Category.objects.all()
+    users = User.objects.all()
+
+    user = request.user
+    user_role = getattr(user.role, 'role_type', None)
+
+    if user not in task.assigned_to.all() and not user.is_superuser:
+        return redirect('dashboard')
+
+    can_edit_assignee = user == task.assigned_by or user.is_superuser
+    is_owner_or_leader = user_role in ['Owner', 'Team Leader']
+
+    if request.method == 'POST':
+        if is_owner_or_leader:
+            # Users with higher role can edit all fields
+            task.title = request.POST['title']
+            task.description = request.POST['description']
+            task.category = Category.objects.get(id=request.POST['category'])
+            task.priority = request.POST['priority']
+            task.due_date = request.POST['due_date']
+
+        task.status = request.POST['status']
+        task.comments = request.POST.get('comments', '')
+
+        if can_edit_assignee:
+            task.assigned_to.set(request.POST.getlist('assigned_to'))
+
+        # Handle file upload
+        if request.FILES.get('attachments'):
+            task.attachments = request.FILES['attachments']
+
+        task.save()
+        return redirect('task_detail', task_id=task.id)
+
+    else:
+        form = TaskForm(instance=task)
+
+    return render(request, 'tracker/task_edit.html', {
+        'form': form,
+        'task': task,
+        'categories': categories,
+        'users': users,
+        'can_edit_assignee': can_edit_assignee,
+        'is_owner_or_leader': is_owner_or_leader,
+    })
+
+""" @login_required
 def task_edit(request, task_id):
     task = get_object_or_404(Task, id=task_id)
     categories = Category.objects.all()
@@ -139,7 +192,7 @@ def task_edit(request, task_id):
         'users': users,
         'can_edit_assignee': can_edit_assignee,
     })
-
+ """
 # views.py
 @login_required
 def task_create(request):
@@ -148,7 +201,9 @@ def task_create(request):
         if form.is_valid():
             task = form.save(commit=False)
             task.created_by = request.user
+            task.assigned_by = request.user
             task.save()
+            form.save_m2m()  # Save the many-to-many field `assigned_to`
             return redirect('dashboard')
     else:
         form = TaskForm()

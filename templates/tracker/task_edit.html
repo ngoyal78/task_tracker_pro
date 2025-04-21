@@ -6,23 +6,57 @@
       {% csrf_token %}
       <div class="form-group">
         <label for="title">Task Title:</label>
-        <input type="text" class="form-control" id="title" name="title" value="{{ task.title }}" required>
+        {% if is_owner_or_leader %}
+          {{ form.title }}
+        {% else %}
+          <input type="text" class="form-control" value="{{ task.title }}" readonly>
+        {% endif %}
+          <!-- <input type="text" class="form-control" id="title" name="title" value="{{ task.title }}" required> -->
       </div>
 
       <div class="form-group">
+        <label for="id_description">Description:</label>
+        {% if is_owner_or_leader %}
+          {{ form.description }}
+        {% else %}
+          <textarea class="form-control" rows="4" readonly>{{ task.description }}</textarea>
+        {% endif %}
+      </div>
+<!--       <div class="form-group">
         <label for="description">Description:</label>
-        <textarea class="form-control" id="description" name="description" rows="4" required>{{ task.description }}</textarea>
-      </div>
+        {% if is_owner_or_leader %}
+          {{ form.description }}
+        {% else %}
+          <textarea class="form-control" id="description" name="description" rows="4" required>{{ task.description }}</textarea>
+        {% endif %}
+        </div> -->
 
       <div class="form-group">
+        <label for="id_category">Category:</label>
+        {% if is_owner_or_leader %}
+          {{ form.category }}
+        {% else %}
+          <input type="text" class="form-control" value="{{ task.category.name }}" readonly>
+        {% endif %}
+      </div>
+<!--       <div class="form-group">
         <label for="category">Category:</label>
         <select class="form-control" id="category" name="category" required>
           {% for category in categories %}
             <option value="{{ category.id }}" {% if category.id == task.category.id %}selected{% endif %}>{{ category.name }}</option>
           {% endfor %}
         </select>
-      </div>
+      </div> -->
 
+      <div class="form-group">
+        <label for="id_priority">Priority:</label>
+        {% if is_owner_or_leader %}
+          {{ form.priority }}
+        {% else %}
+          <input type="text" class="form-control" value="{{ task.priority }}" readonly>
+        {% endif %}
+      </div>
+<!--       
       <div class="form-group">
         <label for="priority">Priority:</label>
         <select class="form-control" id="priority" name="priority" required>
@@ -30,12 +64,21 @@
           <option value="Medium" {% if task.priority == 'Medium' %}selected{% endif %}>Medium</option>
           <option value="High" {% if task.priority == 'High' %}selected{% endif %}>High</option>
         </select>
-      </div>
+      </div> -->
 
       <div class="form-group">
+        <label for="id_due_date">Due Date:</label>
+        {% if is_owner_or_leader %}
+          {{ form.due_date }}
+        {% else %}
+          <input type="text" class="form-control" value="{{ task.due_date }}" readonly>
+        {% endif %}
+      </div>
+      
+<!--       <div class="form-group">
         <label for="due_date">Due Date:</label>
         <input type="date" class="form-control" id="due_date" name="due_date" value="{{ task.due_date|date:'Y-m-d' }}" required>
-      </div>
+      </div> -->
 
       <div class="form-group">
         <label for="status">Status:</label>
@@ -69,8 +112,10 @@
         <label for="attachments">Attachments:</label>
         <input type="file" class="form-control-file" id="attachments" name="attachments">
         {% if task.attachments %}
-          <a href="{{ task.attachments.url }}" target="_blank">View current attachment</a>
-        {% endif %}
+          <a href="{{ task.attachments.url }}" target="_blank">View Attachment</a>
+        {% else %}
+          <p class="text-muted">No attachment uploaded.</p>
+        {% endif %}      
       </div>
 
       <button type="submit" class="btn btn-primary">Save Changes</button>
