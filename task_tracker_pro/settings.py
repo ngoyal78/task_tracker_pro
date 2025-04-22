@@ -43,12 +43,30 @@ TEMPLATES = [{
 TEMPLATES[0]['DIRS'] = [BASE_DIR / 'templates']
 WSGI_APPLICATION = 'task_tracker_pro.wsgi.application'
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+import os
+import dj_database_url
+
+# Check if we're running on Render
+RENDER = os.getenv('RENDER', 'False') == 'True'
+
+if RENDER:
+    DATABASES = {
+        'default': dj_database_url.config(default=os.getenv("DATABASE_URL"))
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
 
 AUTH_PASSWORD_VALIDATORS = []
 LANGUAGE_CODE = 'en-us'
