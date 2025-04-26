@@ -9,6 +9,7 @@ from django.contrib.auth.forms import UserCreationForm
 from django.views.decorators.http import require_POST
 from .forms import TaskForm  # We will create a form for this
 from datetime import date
+from .utils import send_whatsapp_message
 
 class TaskViewSet(viewsets.ModelViewSet):
     queryset = Task.objects.all()
@@ -75,25 +76,66 @@ def dashboard(request):
     }
     return render(request, 'tracker/dashboard.html', context)
 
+# def register(request):
+#     if request.method == 'POST':
+#         form = UserCreationForm(request.POST)
+#         if form.is_valid():
+#             form.save()
+#             return redirect('login')  # Redirect to the login page after successful registration
+#     else:
+#         form = UserCreationForm()
+#     return render(request, 'tracker/register.html', {'form': form})
+
+from .forms import CustomUserCreationForm
+
 def register(request):
     if request.method == 'POST':
-        form = UserCreationForm(request.POST)
+        form = CustomUserCreationForm(request.POST)
         if form.is_valid():
             form.save()
-            return redirect('login')  # Redirect to the login page after successful registration
+            return redirect('login')
     else:
-        form = UserCreationForm()
+        form = CustomUserCreationForm()
     return render(request, 'tracker/register.html', {'form': form})
+
+def notify_assigned_users_on_status_change(task, old_status, new_status):
+    if old_status != new_status:
+        for user in task.assigned_to.all():
+            profile = getattr(user, 'profile', None)
+            if profile and profile.phone_number:
+                message = f"Hi {user.username}, the task '{task.title}' status changed from {old_status} to {new_status}."
+                send_whatsapp_message(profile.phone_number, message)
 
 @login_required
 @require_POST
 def update_task_status(request, task_id):
+    print("update_task_status")
     task = get_object_or_404(Task, id=task_id)
     if request.user in task.assigned_to.all():
+        old_status = task.status
         new_status = request.POST.get('status')
         task.status = new_status
         task.save()
+
+        # Notify all assigned users
+        for user in task.assigned_to.all():
+            profile = getattr(user, 'profile', None)  # You can store phone in a Profile model
+            if profile and profile.phone_number:
+                print(f"Sending WhatsApp to {user.username} at {profile.phone_number}")  # 🛠 Move print here
+                message = f"Hi {user.username}, the task '{task.title}' status changed from {old_status} to {new_status}."
+                send_whatsapp_message(profile.phone_number, message)
+
     return redirect('dashboard')
+
+# @login_required
+# @require_POST
+# def update_task_status(request, task_id):
+#     task = get_object_or_404(Task, id=task_id)
+#     if request.user in task.assigned_to.all():
+#         new_status = request.POST.get('status')
+#         task.status = new_status
+#         task.save()
+#     return redirect('dashboard')
 
 @login_required
 def task_detail(request, task_id):
@@ -116,6 +158,8 @@ def task_edit(request, task_id):
 
     can_edit_assignee = user == task.assigned_by or user.is_superuser
     is_owner_or_leader = user_role in ['Owner', 'Team Leader']
+    old_status = task.status  # Keep track for comparison
+    print(old_status)
 
     if request.method == 'POST':
         if is_owner_or_leader:
@@ -137,7 +181,17 @@ def task_edit(request, task_id):
             task.attachments = request.FILES['attachments']
 
         task.save()
+
+        # Send WhatsApp notification if status changed
+        if old_status != task.status:
+            for user in task.assigned_to.all():
+                profile = getattr(user, 'profile', None)
+                if profile and profile.phone_number:
+                    message = f"Hi {user.username}, the task '{task.title}' status changed from {old_status} to {task.status}."
+                    send_whatsapp_message(profile.phone_number, message)
+        
         return redirect('task_detail', task_id=task.id)
+
 
     else:
         form = TaskForm(instance=task)

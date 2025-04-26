@@ -82,7 +82,11 @@ from decouple import config
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
 
-import os
+TWILIO_ACCOUNT_SID = config('TWILIO_ACCOUNT_SID')
+TWILIO_AUTH_TOKEN = config('TWILIO_AUTH_TOKEN')
+TWILIO_WHATSAPP_FROM = config('TWILIO_WHATSAPP_FROM')
+
 STATIC_URL = '/static/'
 # Add this line to specify where static files should be collected.
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+

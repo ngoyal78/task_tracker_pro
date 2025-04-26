@@ -6,3 +6,4 @@ dj-database-url
 python-dotenv
 python-decouple  # <== Add this line
 djangorestframework==3.14.0
+twilio
