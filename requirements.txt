@@ -13,3 +13,5 @@ pytest-django  # For Django test integration
 coverage  # For test coverage reports
 django-debug-toolbar  # For development debugging
 pillow  # For image processing
+requests  # For API requests to Ollama
+openai-whisper  # Optional: For voice-to-text transcription

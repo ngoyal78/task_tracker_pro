@@ -14,8 +14,8 @@ from datetime import date
 
 from .models import Task, Category, Role
 from .serializers import TaskSerializer, CategorySerializer, RoleSerializer, UserSerializer
-from .forms import TaskForm, CustomUserCreationForm
-from .utils import send_whatsapp_message
+from .forms import TaskForm, CustomUserCreationForm, AITaskForm
+from .utils import send_whatsapp_message, generate_task_from_prompt, transcribe_audio
 
 # Set up logger
 logger = logging.getLogger('tracker')
@@ -468,6 +468,128 @@ def task_gallery_view(request):
     return render(request, 'tracker/task_gallery.html', {
         'tasks': tasks,
         'selected_task': selected_task
+    })
+
+@login_required
+def ai_task_create(request):
+    """
+    Create a new task using AI to extract details from a text prompt.
+    
+    This view handles both text prompts and voice input (if Whisper is installed).
+    """
+    categories = Category.objects.all()
+    users = User.objects.all()
+    
+    if request.method == "POST":
+        form = AITaskForm(request.POST, request.FILES)
+        if form.is_valid():
+            try:
+                # Process audio file if provided
+                audio_file = request.FILES.get('audio_file')
+                prompt = form.cleaned_data.get('prompt', '')
+                
+                if audio_file and not prompt:
+                    # Transcribe audio to text
+                    transcribed_text = transcribe_audio(audio_file)
+                    if transcribed_text:
+                        prompt = transcribed_text
+                        messages.info(request, f"Transcribed audio: '{prompt[:100]}...'")
+                    else:
+                        messages.error(request, "Failed to transcribe audio. Please try again or enter text directly.")
+                        return render(request, 'tracker/ai_task_form.html', {
+                            'form': form,
+                            'categories': categories,
+                            'users': users
+                        })
+                
+                # Generate task details from prompt
+                if not prompt:
+                    messages.error(request, "Please provide either text or audio input")
+                    return render(request, 'tracker/ai_task_form.html', {
+                        'form': form,
+                        'categories': categories,
+                        'users': users
+                    })
+                
+                # Call Ollama to generate task details
+                task_data = generate_task_from_prompt(prompt)
+                
+                if not task_data:
+                    messages.error(request, "Failed to generate task from prompt. Please try again with a clearer description.")
+                    return render(request, 'tracker/ai_task_form.html', {
+                        'form': form,
+                        'categories': categories,
+                        'users': users
+                    })
+                
+                # Create the task with generated data
+                with transaction.atomic():
+                    # Create a new task
+                    task = Task()
+                    
+                    # Use user-provided values if available, otherwise use AI suggestions
+                    task.title = form.cleaned_data.get('title') or task_data.get('title', 'Untitled Task')
+                    task.description = task_data.get('description', prompt)
+                    
+                    # Get category from AI suggestion
+                    category_id = task_data.get('category_id', 1)
+                    try:
+                        task.category = Category.objects.get(id=category_id)
+                    except Category.DoesNotExist:
+                        # Default to first category if suggested one doesn't exist
+                        task.category = Category.objects.first()
+                    
+                    # Use user-provided priority if available, otherwise use AI suggestion
+                    user_priority = form.cleaned_data.get('priority')
+                    if user_priority:
+                        task.priority = user_priority
+                    else:
+                        ai_priority = task_data.get('priority', 'Medium')
+                        # Ensure priority is valid
+                        from .models import PRIORITY_CHOICES
+                        if ai_priority not in dict(PRIORITY_CHOICES):
+                            ai_priority = 'Medium'
+                        task.priority = ai_priority
+                    
+                    # Use user-provided due date if available, otherwise use AI suggestion
+                    task.due_date = form.cleaned_data.get('due_date') or task_data.get('due_date', date.today())
+                    
+                    # Set default status
+                    task.status = 'Not Started'
+                    
+                    # Set creator and assigner
+                    task.created_by = request.user
+                    task.assigned_by = request.user
+                    
+                    # Save the task
+                    task.save()
+                    
+                    # Assign users
+                    assigned_to = form.cleaned_data.get('assigned_to')
+                    if assigned_to:
+                        task.assigned_to.set(assigned_to)
+                    else:
+                        # Default to assigning the creator
+                        task.assigned_to.add(request.user)
+                    
+                    logger.info(f"AI-generated task created: '{task.title}' by {request.user.username}")
+                    messages.success(request, "Task created successfully using AI")
+                    
+                    # Redirect to the task detail page
+                    return redirect('task_detail', task_id=task.id)
+                    
+            except Exception as e:
+                logger.error(f"Error creating AI task: {str(e)}")
+                messages.error(request, f"Error creating task: {str(e)}")
+        else:
+            logger.warning(f"Invalid AI task form: {form.errors}")
+    else:
+        form = AITaskForm()
+    
+    return render(request, 'tracker/ai_task_form.html', {
+        'form': form,
+        'categories': categories,
+        'users': users
     })
 
 @login_required
