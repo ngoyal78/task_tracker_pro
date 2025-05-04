@@ -1,48 +1,224 @@
 {% extends 'tracker/base_generic.html' %}
 
-{% block title %}Task Dashboard{% endblock %}
+{% block title %}Dashboard - Task Tracker Pro{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <h2>Your Assigned Tasks</h2>
-
-    {% if tasks %}
-        <div class="table-responsive">
-            <table class="table table-bordered table-hover">
-                <thead>
-                    <tr>
-                        <th>Title</th>
-                        <th>Priority</th>
-                        <th>Status</th>
-                        <th>Due Date</th>
-                        <th>Category</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for task in tasks %}
-                    <tr>
-                        <td>{{ task.title }}</td>
-                        <td>{{ task.priority }}</td>
-                        <td>{{ task.status }}</td>
-                        <td>
-                            {{ task.due_date }}
-                            {% if task.is_overdue %}
-                                <span class="badge bg-danger">Overdue</span>
-                            {% endif %}
-                        </td>
-                        <td>{{ task.category.name }}</td>
-                        <td>
-                            <a href="{% url 'task_detail' task.id %}" class="btn btn-primary btn-sm">View</a>
-                            <a href="{% url 'task_edit' task.id %}" class="btn btn-success btn-sm">Edit</a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+<div class="row mb-4">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1 class="mb-0">
+                <i class="fas fa-tachometer-alt me-2"></i>Dashboard
+            </h1>
+            <a href="{% url 'task_create' %}" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i>New Task
+            </a>
         </div>
-    {% else %}
-        <p>No tasks assigned.</p>
-    {% endif %}
+        <hr>
+    </div>
+</div>
+
+<!-- Dashboard Stats -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="dashboard-stats text-center">
+            <i class="fas fa-tasks fa-3x mb-2 text-primary"></i>
+            <div class="task-count">{{ total_count }}</div>
+            <p class="mb-0">Total Tasks</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="dashboard-stats text-center">
+            <i class="fas fa-hourglass-half fa-3x mb-2 text-warning"></i>
+            <div class="task-count">{{ in_progress_count }}</div>
+            <p class="mb-0">In Progress</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="dashboard-stats text-center">
+            <i class="fas fa-check-circle fa-3x mb-2 text-success"></i>
+            <div class="task-count">{{ completed_count }}</div>
+            <p class="mb-0">Completed</p>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="dashboard-stats text-center">
+            <i class="fas fa-exclamation-triangle fa-3x mb-2 text-danger"></i>
+            <div class="task-count">{{ overdue_count }}</div>
+            <p class="mb-0">Overdue</p>
+        </div>
+    </div>
+</div>
+
+<!-- Task List -->
+<div class="row">
+    <div class="col-md-12">
+        <div class="card shadow-sm">
+            <div class="card-header bg-white">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list me-2"></i>Your Tasks
+                    </h5>
+                    <div>
+                        <!-- Bulk Actions Dropdown -->
+                        <div class="btn-group me-2">
+                            <button type="button" class="btn btn-sm btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false" id="bulk-actions-btn" disabled>
+                                <i class="fas fa-tasks me-1"></i>Bulk Actions
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><h6 class="dropdown-header">Change Status</h6></li>
+                                <li><button type="button" class="dropdown-item bulk-status-action" data-status="Not Started">Mark as Not Started</button></li>
+                                <li><button type="button" class="dropdown-item bulk-status-action" data-status="In Progress">Mark as In Progress</button></li>
+                                <li><button type="button" class="dropdown-item bulk-status-action" data-status="Submitted for Approval">Submit for Approval</button></li>
+                                <li><button type="button" class="dropdown-item bulk-status-action" data-status="Approved">Mark as Approved</button></li>
+                            </ul>
+                        </div>
+                        
+                        <!-- Filter Dropdown -->
+                        <div class="btn-group">
+                            <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-filter me-1"></i>Filter
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li><a class="dropdown-item task-filter" href="#" data-filter="all">All Tasks</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><h6 class="dropdown-header">By Priority</h6></li>
+                                <li><a class="dropdown-item task-filter" href="#" data-filter="priority" data-priority="High">High Priority</a></li>
+                                <li><a class="dropdown-item task-filter" href="#" data-filter="priority" data-priority="Medium">Medium Priority</a></li>
+                                <li><a class="dropdown-item task-filter" href="#" data-filter="priority" data-priority="Low">Low Priority</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><h6 class="dropdown-header">By Status</h6></li>
+                                <li><a class="dropdown-item task-filter" href="#" data-filter="status" data-status="Not Started">Not Started</a></li>
+                                <li><a class="dropdown-item task-filter" href="#" data-filter="status" data-status="In Progress">In Progress</a></li>
+                                <li><a class="dropdown-item task-filter" href="#" data-filter="status" data-status="Submitted for Approval">Submitted for Approval</a></li>
+                                <li><a class="dropdown-item task-filter" href="#" data-filter="status" data-status="Approved">Approved</a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item task-filter" href="#" data-filter="overdue">Overdue Tasks</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Search Box -->
+                <div class="row">
+                    <div class="col-md-6 offset-md-3">
+                        <div class="input-group">
+                            <span class="input-group-text bg-light">
+                                <i class="fas fa-search text-muted"></i>
+                            </span>
+                            <input type="text" id="task-search" class="form-control" placeholder="Search tasks by title or description...">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                {% if tasks %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Title</th>
+                                    <th>Priority</th>
+                                    <th>Status</th>
+                                    <th>Due Date</th>
+                                    <th>Category</th>
+                                    <th class="text-end">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for task in tasks %}
+                                <tr class="task-row {% if task.priority == 'High' %}priority-high{% elif task.priority == 'Medium' %}priority-medium{% else %}priority-low{% endif %}"
+                                    data-priority="{{ task.priority }}" 
+                                    data-status="{{ task.status }}" 
+                                    data-overdue="{% if task.is_overdue %}true{% else %}false{% endif %}"
+                                    data-description="{{ task.description|truncatechars:100 }}">
+                                    <td>
+                                        <strong class="task-title">{{ task.title }}</strong>
+                                    </td>
+                                    <td>
+                                        {% if task.priority == 'High' %}
+                                            <span class="badge bg-danger">{{ task.priority }}</span>
+                                        {% elif task.priority == 'Medium' %}
+                                            <span class="badge bg-warning text-dark">{{ task.priority }}</span>
+                                        {% else %}
+                                            <span class="badge bg-success">{{ task.priority }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if task.status == 'Not Started' %}
+                                            <span class="badge bg-secondary">{{ task.status }}</span>
+                                        {% elif task.status == 'In Progress' %}
+                                            <span class="badge bg-primary">{{ task.status }}</span>
+                                        {% elif task.status == 'Submitted for Approval' %}
+                                            <span class="badge bg-info text-dark">{{ task.status }}</span>
+                                        {% elif task.status == 'Approved' %}
+                                            <span class="badge bg-success">{{ task.status }}</span>
+                                        {% else %}
+                                            <span class="badge bg-warning text-dark">{{ task.status }}</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if task.is_overdue %}
+                                            <span class="text-danger">
+                                                <i class="fas fa-exclamation-circle me-1"></i>{{ task.due_date }}
+                                            </span>
+                                        {% else %}
+                                            {{ task.due_date }}
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="category-pill">{{ task.category.name }}</span>
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="btn-group">
+                                            <a href="{% url 'task_detail' task.id %}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            <a href="{% url 'task_edit' task.id %}" class="btn btn-sm btn-outline-success">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <i class="fas fa-ellipsis-v"></i>
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end">
+                                                <li>
+                                                    <form action="{% url 'update_task_status' task.id %}" method="post" class="d-inline status-update-form">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="status" value="In Progress">
+                                                        <button type="submit" class="dropdown-item">Mark as In Progress</button>
+                                                    </form>
+                                                </li>
+                                                <li>
+                                                    <form action="{% url 'update_task_status' task.id %}" method="post" class="d-inline status-update-form">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="status" value="Submitted for Approval">
+                                                        <button type="submit" class="dropdown-item">Submit for Approval</button>
+                                                    </form>
+                                                </li>
+                                                <li>
+                                                    <form action="{% url 'update_task_status' task.id %}" method="post" class="d-inline status-update-form">
+                                                        {% csrf_token %}
+                                                        <input type="hidden" name="status" value="Approved">
+                                                        <button type="submit" class="dropdown-item">Mark as Approved</button>
+                                                    </form>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-clipboard-list fa-4x text-muted mb-3"></i>
+                        <h5>No tasks assigned</h5>
+                        <p class="text-muted">You don't have any tasks assigned to you yet.</p>
+                        <a href="{% url 'task_create' %}" class="btn btn-primary">Create a New Task</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}

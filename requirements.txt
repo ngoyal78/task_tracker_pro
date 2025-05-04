@@ -4,6 +4,12 @@ psycopg2-binary
 whitenoise
 dj-database-url
 python-dotenv
-python-decouple  # <== Add this line
+python-decouple
 djangorestframework==3.14.0
 twilio
+argon2-cffi  # For stronger password hashing
+pytest  # For running tests
+pytest-django  # For Django test integration
+coverage  # For test coverage reports
+django-debug-toolbar  # For development debugging
+pillow  # For image processing

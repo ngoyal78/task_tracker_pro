@@ -4,70 +4,203 @@
 
 {% block content %}
 <div class="container-fluid mt-4">
+  <div class="row mb-3">
+    <div class="col-12">
+      <nav aria-label="breadcrumb">
+        <ol class="breadcrumb bg-light p-2">
+          <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
+          <li class="breadcrumb-item active" aria-current="page">Task Gallery</li>
+        </ol>
+      </nav>
+    </div>
+  </div>
+
   <div class="row">
-    
     <!-- Left column: Task Cards -->
-    <div class="col-md-4 mb-3" style="max-height: 80vh; overflow-y: auto;">
-      <h4 class="mb-3">Tasks</h4>
-      {% for task in tasks %}
-        <div class="card mb-3 {% if selected_task and selected_task.id == task.id %}border-primary{% endif %}">
-          <div class="card-body">
-            <h5 class="card-title">{{ task.title }}</h5>
-            <p class="mb-1"><strong>Priority:</strong> {{ task.priority }}</p>
-            <p class="mb-1"><strong>Status:</strong> {{ task.status }}</p>
-            <p class="mb-1"><strong>Due:</strong> {{ task.due_date }}</p>
-            <p class="mb-1"><strong>Category:</strong> {{ task.category.name }}</p>
-            <a href="?selected={{ task.id }}" class="btn btn-sm btn-outline-primary mt-2">View Details</a>
+    <div class="col-md-4 mb-3">
+      <div class="card shadow-sm">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+          <h4 class="mb-0">
+            <i class="fas fa-list me-2"></i>Tasks
+          </h4>
+          <a href="{% url 'task_create' %}" class="btn btn-sm btn-primary">
+            <i class="fas fa-plus me-1"></i>New Task
+          </a>
+        </div>
+        <div class="card-body p-0" style="max-height: 75vh; overflow-y: auto;">
+          <div class="list-group list-group-flush">
+            {% for task in tasks %}
+              <a href="?selected={{ task.id }}" class="list-group-item list-group-item-action {% if selected_task and selected_task.id == task.id %}active{% endif %}">
+                <div class="d-flex justify-content-between align-items-center">
+                  <h6 class="mb-1 {% if selected_task and selected_task.id == task.id %}text-white{% endif %}">{{ task.title }}</h6>
+                  {% if task.is_overdue %}
+                    <span class="badge bg-danger">Overdue</span>
+                  {% endif %}
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-2">
+                  <div>
+                    {% if task.priority == 'High' %}
+                      <span class="badge bg-danger">High</span>
+                    {% elif task.priority == 'Medium' %}
+                      <span class="badge bg-warning text-dark">Medium</span>
+                    {% else %}
+                      <span class="badge bg-success">Low</span>
+                    {% endif %}
+                    
+                    {% if task.status == 'Not Started' %}
+                      <span class="badge bg-secondary ms-1">Not Started</span>
+                    {% elif task.status == 'In Progress' %}
+                      <span class="badge bg-primary ms-1">In Progress</span>
+                    {% elif task.status == 'Submitted for Approval' %}
+                      <span class="badge bg-info text-dark ms-1">For Approval</span>
+                    {% elif task.status == 'Approved' %}
+                      <span class="badge bg-success ms-1">Approved</span>
+                    {% else %}
+                      <span class="badge bg-warning text-dark ms-1">{{ task.status }}</span>
+                    {% endif %}
+                  </div>
+                  <small class="text-muted {% if selected_task and selected_task.id == task.id %}text-white{% endif %}">{{ task.due_date }}</small>
+                </div>
+              </a>
+            {% empty %}
+              <div class="text-center py-5">
+                <i class="fas fa-clipboard-list fa-3x text-muted mb-3"></i>
+                <p>No tasks available.</p>
+                <a href="{% url 'task_create' %}" class="btn btn-primary btn-sm">Create a Task</a>
+              </div>
+            {% endfor %}
           </div>
         </div>
-      {% empty %}
-        <p>No tasks available.</p>
-      {% endfor %}
+      </div>
     </div>
 
-<!-- Right column: Task Details -->
-<div class="col-md-8">
-    {% if selected_task %}
-      <div class="card shadow-sm">
-        <div class="card-header bg-primary text-white">
-          <h4 class="mb-0">{{ selected_task.title }}</h4>
+    <!-- Right column: Task Details -->
+    <div class="col-md-8">
+      {% if selected_task %}
+        <div class="card shadow-sm">
+          <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <h4 class="mb-0 text-primary">
+              <i class="fas fa-tasks me-2"></i>{{ selected_task.title }}
+            </h4>
+            <div>
+              {% if selected_task.priority == 'High' %}
+                <span class="badge bg-danger">High Priority</span>
+              {% elif selected_task.priority == 'Medium' %}
+                <span class="badge bg-warning text-dark">Medium Priority</span>
+              {% else %}
+                <span class="badge bg-success">Low Priority</span>
+              {% endif %}
+              
+              {% if selected_task.status == 'Not Started' %}
+                <span class="badge bg-secondary ms-1">Not Started</span>
+              {% elif selected_task.status == 'In Progress' %}
+                <span class="badge bg-primary ms-1">In Progress</span>
+              {% elif selected_task.status == 'Submitted for Approval' %}
+                <span class="badge bg-info text-dark ms-1">Submitted for Approval</span>
+              {% elif selected_task.status == 'Approved' %}
+                <span class="badge bg-success ms-1">Approved</span>
+              {% else %}
+                <span class="badge bg-warning text-dark ms-1">{{ selected_task.status }}</span>
+              {% endif %}
+              
+              {% if selected_task.is_overdue %}
+                <span class="badge bg-danger ms-1">Overdue</span>
+              {% endif %}
+            </div>
+          </div>
+          
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-8">
+                <div class="mb-4">
+                  <h5 class="border-bottom pb-2">Description</h5>
+                  <p class="text-muted">{{ selected_task.description|linebreaks }}</p>
+                </div>
+                
+                {% if selected_task.comments %}
+                <div class="mb-4">
+                  <h5 class="border-bottom pb-2">Comments</h5>
+                  <div class="p-3 bg-light rounded">{{ selected_task.comments|linebreaks }}</div>
+                </div>
+                {% endif %}
+              </div>
+              
+              <div class="col-md-4">
+                <div class="card mb-3">
+                  <div class="card-header bg-light">
+                    <h5 class="mb-0">Task Details</h5>
+                  </div>
+                  <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between">
+                      <span>Category:</span>
+                      <span class="badge bg-info text-dark">{{ selected_task.category.name }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                      <span>Due Date:</span>
+                      <span {% if selected_task.is_overdue %}class="text-danger"{% endif %}>
+                        {% if selected_task.is_overdue %}<i class="fas fa-exclamation-circle me-1"></i>{% endif %}
+                        {{ selected_task.due_date }}
+                      </span>
+                    </li>
+                    <li class="list-group-item">
+                      <div><strong>Assigned To:</strong></div>
+                      {% if selected_task.assigned_to.all %}
+                        <ul class="list-unstyled mt-1 mb-0">
+                          {% for user in selected_task.assigned_to.all %}
+                            <li><i class="fas fa-user me-1"></i> {{ user.username }}</li>
+                          {% endfor %}
+                        </ul>
+                      {% else %}
+                        <span class="text-muted">Not assigned</span>
+                      {% endif %}
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                      <span>Assigned By:</span>
+                      <span>{{ selected_task.assigned_by.username|default:"N/A" }}</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between">
+                      <span>Created By:</span>
+                      <span>{{ selected_task.created_by.username|default:"N/A" }}</span>
+                    </li>
+                  </ul>
+                </div>
+                
+                {% if selected_task.attachments %}
+                <div class="card mb-3">
+                  <div class="card-header bg-light">
+                    <h5 class="mb-0">Attachments</h5>
+                  </div>
+                  <div class="card-body">
+                    <a href="{{ selected_task.attachments.url }}" download class="btn btn-outline-primary btn-sm">
+                      <i class="fas fa-download me-1"></i>Download Attachment
+                    </a>
+                  </div>
+                </div>
+                {% endif %}
+              </div>
+            </div>
+          </div>
+          
+          <div class="card-footer bg-white">
+            <div class="d-flex justify-content-between">
+              <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+              </a>
+              <a href="{% url 'task_edit' selected_task.id %}" class="btn btn-success">
+                <i class="fas fa-edit me-1"></i>Edit Task
+              </a>
+            </div>
+          </div>
         </div>
-        <div class="card-body">
-          <p><strong>Description:</strong> {{ selected_task.description }}</p>
-          <p><strong>Priority:</strong> {{ selected_task.priority }}</p>
-          <p><strong>Status:</strong> {{ selected_task.status }}</p>
-          <p><strong>Due Date:</strong> {{ selected_task.due_date }}</p>
-          <p><strong>Category:</strong> {{ selected_task.category.name }}</p>
-          <p><strong>Assigned To:</strong>
-            {% if selected_task.assigned_to.all %}
-              <ul>
-                {% for user in selected_task.assigned_to.all %}
-                  <li>{{ user.username }}</li>
-                {% endfor %}
-              </ul>
-            {% else %}
-              Not assigned
-            {% endif %}
-          </p>
-          <p><strong>Assigned By:</strong> {{ selected_task.assigned_by.username|default:"N/A" }}</p>
-          <p><strong>Created By:</strong> {{ selected_task.created_by.username|default:"N/A" }}</p>
-          {% if selected_task.attachments %}
-            <p><strong>Attachment:</strong> 
-              <a href="{{ selected_task.attachments.url }}" target="_blank">Download</a>
-            </p>
-          {% endif %}
-          {% if selected_task.comments %}
-            <p><strong>Comments:</strong> {{ selected_task.comments }}</p>
-          {% endif %}
-  
-          <!-- ✅ Edit Button -->
-          <a href="{% url 'task_edit' selected_task.id %}" class="btn btn-success mt-3">Edit Task</a>
+      {% else %}
+        <div class="card shadow-sm">
+          <div class="card-body text-center py-5">
+            <i class="fas fa-hand-pointer fa-4x text-muted mb-3"></i>
+            <h5>No Task Selected</h5>
+            <p class="text-muted">Select a task from the list to view its details.</p>
+          </div>
         </div>
-      </div>
-    {% else %}
-      <div class="text-muted">
-        <p>Select a task to view details.</p>
-      </div>
-    {% endif %}
-</div>
+      {% endif %}
+    </div>
+  </div>
 {% endblock %}
