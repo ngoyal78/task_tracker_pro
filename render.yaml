@@ -13,6 +13,7 @@ services:
     buildCommand: |
       pip install -r requirements.txt
       python manage.py collectstatic --noinput
+      python manage.py makemigrations tracker  # Create migrations for tracker app
       python manage.py migrate
       python manage.py createsuperuser --noinput || true  # Create superuser if env vars are set
     startCommand: gunicorn task_tracker_pro.wsgi:application --bind 0.0.0.0:8000
