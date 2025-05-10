@@ -31,10 +31,7 @@ services:
           property: connectionString
       # AI model configuration
       - key: OLLAMA_BASE_URL
-        fromService:
-          name: task-tracker-ai
-          type: web
-          property: url
+        value: "https://task-tracker-ai.onrender.com"  # Manually constructed URL with protocol
       - key: OLLAMA_MODEL
         value: "mistral"
       - key: WHISPER_ENABLED
