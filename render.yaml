@@ -31,7 +31,7 @@ services:
           property: connectionString
       # AI model configuration
       - key: OLLAMA_BASE_URL
-        value: "https://task-tracker-ai.onrender.com"  # Manually constructed URL with protocol
+        value: "http://localhost:11434"  # Default to local Ollama instance for development
       - key: OLLAMA_MODEL
         value: "mistral"
       - key: WHISPER_ENABLED
@@ -54,23 +54,27 @@ services:
       # - key: TWILIO_WHATSAPP_FROM
       #   sync: false
 
-  # AI model service (Ollama)
-  - type: web
-    name: task-tracker-ai
-    runtime: docker
-    plan: standard # Requires at least standard plan for memory requirements
-    region: ohio # Choose an appropriate region
-    dockerfilePath: ./Dockerfile.ollama
-    autoDeploy: false # Manual deployment for AI service
-    disk:
-      name: ollama-models
-      mountPath: /root/.ollama
-      sizeGB: 10 # Adjust based on model size requirements
-    envVars:
-      - key: OLLAMA_HOST
-        value: "0.0.0.0"
-      - key: OLLAMA_MODELS
-        value: "mistral" # Comma-separated list of models to pull
+  # Note: The Ollama service below requires a paid plan on Render
+  # For free Render accounts, comment out this service and use an external Ollama instance
+  # or set up a local Ollama server for development
+  
+  # AI model service (Ollama) - REQUIRES PAID PLAN
+  # - type: web
+  #   name: task-tracker-ai
+  #   runtime: docker
+  #   plan: standard # Requires at least standard plan for memory requirements
+  #   region: ohio # Choose an appropriate region
+  #   dockerfilePath: ./Dockerfile.ollama
+  #   autoDeploy: false # Manual deployment for AI service
+  #   disk:
+  #     name: ollama-models
+  #     mountPath: /root/.ollama
+  #     sizeGB: 10 # Adjust based on model size requirements
+  #   envVars:
+  #     - key: OLLAMA_HOST
+  #       value: "0.0.0.0"
+  #     - key: OLLAMA_MODELS
+  #       value: "mistral" # Comma-separated list of models to pull
 
 databases:
   - name: task-tracker-db

@@ -31,6 +31,30 @@ Follow the detailed instructions in [RENDER_DEPLOYMENT.md](RENDER_DEPLOYMENT.md)
 - **PostgreSQL Database**: Can run on Render's free tier
 - **AI Model Service**: Requires a paid plan (minimum Standard - $7/month) due to memory requirements
 
+## Free Tier Deployment
+
+If you want to deploy Task Tracker Pro on Render's free tier, you have the following options:
+
+### Option 1: Deploy without AI features
+
+1. Comment out or remove the AI model service section in `render.yaml`
+2. Set `OLLAMA_BASE_URL` to a placeholder value like `http://localhost:11434`
+3. Deploy only the web application and database
+4. The application will work normally, but AI-powered task creation will fall back to rule-based extraction
+
+### Option 2: Use an external Ollama instance
+
+1. Comment out or remove the AI model service section in `render.yaml`
+2. Set up Ollama on your local machine or another server
+3. Update `OLLAMA_BASE_URL` in your Render environment variables to point to your external Ollama instance
+4. Ensure your Ollama instance is publicly accessible with proper security measures
+
+### Option 3: Use a different AI service
+
+1. Comment out or remove the AI model service section in `render.yaml`
+2. Modify the application code to use a different AI service that's compatible with free accounts
+3. Update the environment variables accordingly
+
 ## Key Files
 
 - `render.yaml` - Blueprint configuration for all services

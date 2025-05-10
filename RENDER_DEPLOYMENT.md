@@ -265,9 +265,47 @@ The web application and database can run on Render's free tier with limitations:
    - No automatic backups (you should create manual backups regularly)
    - Limited to shared CPU and 256 MB RAM
 
+### Free Tier Deployment Options
+
+The AI service cannot run on Render's free tier due to memory requirements. If you want to deploy Task Tracker Pro using only the free tier, you have the following options:
+
+1. **Deploy without AI features**:
+   - Skip Step 3 (Deploy the AI Model Service)
+   - Set `OLLAMA_BASE_URL` to `http://localhost:11434` (default local value)
+   - The application will work normally, but AI-powered task creation will fall back to rule-based extraction
+   - This provides basic functionality without the advanced AI features
+
+2. **Use an external Ollama instance**:
+   - Skip Step 3 (Deploy the AI Model Service)
+   - Set up Ollama on your local machine or another server
+   - Set `OLLAMA_BASE_URL` to the URL of your external Ollama instance
+   - Ensure your Ollama instance is publicly accessible with proper security measures
+   - This allows you to use AI features without paying for Render's standard plan
+
+3. **Use a different AI service**:
+   - Skip Step 3 (Deploy the AI Model Service)
+   - Modify the application code to use a different AI service that's compatible with free accounts
+   - Update the environment variables accordingly
+   - This requires code changes but allows AI features on a free budget
+
+To modify the `render.yaml` file for free tier deployment:
+
+```yaml
+# Comment out or remove the AI model service section
+# - type: web
+#   name: task-tracker-ai
+#   runtime: docker
+#   plan: standard
+#   ...
+
+# Update the OLLAMA_BASE_URL to use a default or external value
+- key: OLLAMA_BASE_URL
+  value: "http://localhost:11434"  # Default local value or your external Ollama URL
+```
+
 ### AI Service Costs
 
-The AI service requires a paid plan due to memory requirements:
+If you choose to deploy the AI service on Render, it requires a paid plan due to memory requirements:
 
 1. **Minimum Requirements**:
    - Standard plan ($7/month) with 2GB RAM
@@ -288,6 +326,10 @@ The AI service requires a paid plan due to memory requirements:
 3. **Optimize Database Usage**:
    - Regularly clean up unnecessary data
    - Implement efficient queries to reduce database load
+
+4. **Use External AI Services**:
+   - Consider using an external AI service instead of hosting Ollama on Render
+   - Many AI services offer free tiers or pay-as-you-go pricing that may be more cost-effective
 
 ## Security Considerations
 
