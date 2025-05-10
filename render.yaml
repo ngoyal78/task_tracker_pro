@@ -1,42 +1,41 @@
-# Render configuration for Task Tracker Pro
-# Updated version based on exported configuration
+# Render configuration for Task Tracker Pro (Free Tier)
 version: "1"
 
 services:
   # Main web application
   - type: web
-    name: task_tracker_pro  # Using underscores to match existing deployment
+    name: task-tracker-pro
     runtime: python
-    repo: https://github.com/ngoyal78/task_tracker_pro  # Your GitHub repository
     plan: free
-    region: oregon  # Matching existing deployment region
+    region: oregon  # Choose the region closest to your users
     buildCommand: |
       pip install -r requirements.txt
       python manage.py collectstatic --noinput
-      python manage.py makemigrations tracker  # Create migrations for tracker app
+      python manage.py makemigrations tracker
       python manage.py migrate
-      python manage.py createsuperuser --noinput || true  # Create superuser if env vars are set
-    startCommand: gunicorn task_tracker_pro.wsgi:application --bind 0.0.0.0:8000
+      python manage.py createsuperuser --noinput || true
+    startCommand: gunicorn task_tracker_pro.wsgi:application --bind 0.0.0.0:$PORT
     autoDeploy: true
     envVars:
       # Core environment variables
       - key: SECRET_KEY
-        sync: false  # Set this manually in the Render dashboard
+        generateValue: true
       - key: DEBUG
         value: "False"
       - key: ALLOWED_HOSTS
-        sync: false  # Set this manually in the Render dashboard
+        value: ".onrender.com"  # Allows all Render subdomains
       - key: RENDER
         value: "True"
       - key: CSRF_TRUSTED_ORIGINS
-        sync: false  # Set this manually in the Render dashboard
+        value: "https://*.onrender.com"  # Allows all Render subdomains
       
       # Database connection
-      # If you're using an external database or Render's database service:
       - key: DATABASE_URL
-        sync: false  # Set this manually in the Render dashboard
+        fromDatabase:
+          name: task-tracker-db
+          property: connectionString
       
-      # Superuser creation (optional)
+      # Superuser creation (set these in the Render dashboard)
       - key: DJANGO_SUPERUSER_USERNAME
         sync: false
       - key: DJANGO_SUPERUSER_EMAIL
@@ -51,14 +50,11 @@ services:
         value: "mistral"
       - key: WHISPER_ENABLED
         value: "False"
-      
-      # Optional Twilio configuration
-      - key: TWILIO_ACCOUNT_SID
-        sync: false
-      - key: TWILIO_AUTH_TOKEN
-        sync: false
-      - key: TWILIO_WHATSAPP_FROM
-        sync: false
 
-# Note: For free tier deployment, we're not including the AI service or database definitions
-# If you need a database, create it manually in the Render dashboard and set DATABASE_URL
+# Database definition
+databases:
+  - name: task-tracker-db
+    plan: free
+    region: oregon  # Same region as the web service
+    databaseName: task_tracker
+    user: task_tracker_user
