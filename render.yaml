@@ -1,94 +1,63 @@
+# Render configuration for Task Tracker Pro
+# Updated version based on exported configuration
+version: "1"
+
 services:
   # Main web application
   - type: web
-    name: task-tracker-pro
+    name: task_tracker_pro  # Using underscores to match existing deployment
     runtime: python
-    plan: free # Using the free plan (upgrade as needed)
-    region: ohio # Choose an appropriate region
+    repo: https://github.com/ngoyal78/task_tracker_pro  # Your GitHub repository
+    plan: free
+    region: oregon  # Matching existing deployment region
     buildCommand: |
       pip install -r requirements.txt
       python manage.py collectstatic --noinput
       python manage.py migrate
-    startCommand: gunicorn task_tracker_pro.wsgi:application --bind 0.0.0.0:$PORT
-    healthCheckPath: /
+      python manage.py createsuperuser --noinput || true  # Create superuser if env vars are set
+    startCommand: gunicorn task_tracker_pro.wsgi:application --bind 0.0.0.0:8000
     autoDeploy: true
     envVars:
-      - key: DJANGO_SETTINGS_MODULE
-        value: task_tracker_pro.settings
+      # Core environment variables
       - key: SECRET_KEY
-        generateValue: true
+        sync: false  # Set this manually in the Render dashboard
       - key: DEBUG
         value: "False"
       - key: ALLOWED_HOSTS
-        value: "task-tracker-pro.onrender.com"
+        sync: false  # Set this manually in the Render dashboard
       - key: RENDER
         value: "True"
       - key: CSRF_TRUSTED_ORIGINS
-        value: "https://task-tracker-pro.onrender.com"
-      # Database connection
-      # Option 1: Use fromDatabase property (recommended for new deployments)
-      - key: DATABASE_URL
-        fromDatabase:
-          name: task-tracker-db
-          property: connectionString
+        sync: false  # Set this manually in the Render dashboard
       
-      # Option 2: If Option 1 doesn't work, comment it out and uncomment the line below
-      # with your actual database connection string from the Render dashboard
-      # - key: DATABASE_URL
-      #   value: "postgres://task_user:password@dpg-xxxxx-a.region.render.com:5432/task_tracker"
-      # AI model configuration
+      # Database connection
+      # If you're using an external database or Render's database service:
+      - key: DATABASE_URL
+        sync: false  # Set this manually in the Render dashboard
+      
+      # Superuser creation (optional)
+      - key: DJANGO_SUPERUSER_USERNAME
+        sync: false
+      - key: DJANGO_SUPERUSER_EMAIL
+        sync: false
+      - key: DJANGO_SUPERUSER_PASSWORD
+        sync: false
+      
+      # AI configuration (using local fallback for free tier)
       - key: OLLAMA_BASE_URL
-        value: "http://localhost:11434"  # Default to local Ollama instance for development
+        value: "http://localhost:11434"  # Default to local Ollama instance
       - key: OLLAMA_MODEL
         value: "mistral"
       - key: WHISPER_ENABLED
         value: "False"
-      # Optional environment variables (uncomment and configure as needed)
-      # - key: EMAIL_HOST
-      #   value: "smtp.gmail.com"
-      # - key: EMAIL_PORT
-      #   value: "587"
-      # - key: EMAIL_USE_TLS
-      #   value: "True"
-      # - key: EMAIL_HOST_USER
-      #   sync: false
-      # - key: EMAIL_HOST_PASSWORD
-      #   sync: false
-      # - key: TWILIO_ACCOUNT_SID
-      #   sync: false
-      # - key: TWILIO_AUTH_TOKEN
-      #   sync: false
-      # - key: TWILIO_WHATSAPP_FROM
-      #   sync: false
+      
+      # Optional Twilio configuration
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_WHATSAPP_FROM
+        sync: false
 
-  # Note: The Ollama service below requires a paid plan on Render
-  # For free Render accounts, comment out this service and use an external Ollama instance
-  # or set up a local Ollama server for development
-  
-  # AI model service (Ollama) - REQUIRES PAID PLAN
-  # - type: web
-  #   name: task-tracker-ai
-  #   runtime: docker
-  #   plan: standard # Requires at least standard plan for memory requirements
-  #   region: ohio # Choose an appropriate region
-  #   dockerfilePath: ./Dockerfile.ollama
-  #   autoDeploy: false # Manual deployment for AI service
-  #   disk:
-  #     name: ollama-models
-  #     mountPath: /root/.ollama
-  #     sizeGB: 10 # Adjust based on model size requirements
-  #   envVars:
-  #     - key: OLLAMA_HOST
-  #       value: "0.0.0.0"
-  #     - key: OLLAMA_MODELS
-  #       value: "mistral" # Comma-separated list of models to pull
-
-databases:
-  - name: task-tracker-db
-    plan: free # Using the free plan (upgrade as needed)
-    region: ohio # Choose an appropriate region
-    databaseName: task_tracker
-    user: task_user
-    ipAllowList: # Restrict access to specific IP addresses if needed
-      - source: 0.0.0.0/0
-        description: everywhere
+# Note: For free tier deployment, we're not including the AI service or database definitions
+# If you need a database, create it manually in the Render dashboard and set DATABASE_URL
