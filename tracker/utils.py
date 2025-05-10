@@ -5,8 +5,53 @@ import requests
 from twilio.rest import Client
 from twilio.base.exceptions import TwilioRestException
 from django.conf import settings
+import dateparser
+import datetime
 
 logger = logging.getLogger('tracker')
+
+def compute_due_date(natural_text): 
+    """Convert natural date expressions like 'next Monday' to YYYY-MM-DD"""
+    # Special handling for "next Monday" or similar expressions
+    import re
+    next_day_match = re.search(r'next\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)', natural_text.lower())
+    
+    if next_day_match:
+        day_name = next_day_match.group(1).capitalize()
+        # Get today's date
+        today = datetime.datetime.now()
+        # Get today's weekday (0 = Monday, 6 = Sunday in Python's datetime)
+        today_weekday = today.weekday()
+        
+        # Convert day name to weekday number (0-6)
+        day_to_num = {
+            'Monday': 0, 'Tuesday': 1, 'Wednesday': 2, 'Thursday': 3,
+            'Friday': 4, 'Saturday': 5, 'Sunday': 6
+        }
+        target_weekday = day_to_num[day_name]
+        
+        # Calculate days until next occurrence of the target day
+        days_ahead = target_weekday - today_weekday
+        if days_ahead <= 0:  # Target day is today or earlier in the week
+            days_ahead += 7  # So we want next week's occurrence
+            
+        # Calculate the date
+        next_day_date = today + datetime.timedelta(days=days_ahead)
+        logger.info(f"Calculated next {day_name} as {next_day_date.strftime('%Y-%m-%d')}")
+        return next_day_date.strftime('%Y-%m-%d')
+    
+    # Use dateparser for other expressions
+    parsed_date = dateparser.parse(
+        natural_text,
+        settings={
+            'PREFER_DATES_FROM': 'future',
+            'RELATIVE_BASE': datetime.datetime.now(),
+            'RETURN_AS_TIMEZONE_AWARE': False
+        }
+    )
+    if parsed_date:
+        return parsed_date.strftime('%Y-%m-%d')
+    return None
 
 def generate_task_from_prompt(prompt):
     """
@@ -23,10 +68,11 @@ def generate_task_from_prompt(prompt):
         logger.error("Empty prompt provided to task generator")
         return None
     
+    today_str = datetime.date.today().strftime('%Y-%m-%d')
     # First try using Ollama
     try:
         # Prepare the system prompt to guide the model
-        system_prompt = """
+        system_prompt = f"""
         You are a task creation assistant for an auto surveyor business. Based on the user's description, extract the following details:
         - title: A concise title for the task (include vehicle identification if available)
         - description: A detailed description of what needs to be done, including:
@@ -40,7 +86,7 @@ def generate_task_from_prompt(prompt):
           * 2 for Damage Assessment
           * 3 for Claims Processing
           * 4 for Final Inspection
-        - due_date: A reasonable due date in YYYY-MM-DD format based on urgency mentioned
+        - due_date: Convert relative expressions like 'next Monday' into a date string in YYYY-MM-DD format, using today’s date as {today_str}.
         - assigned_to: Extract name of person to assign to if mentioned
         
         Format your response as a JSON object with these fields.
@@ -58,7 +104,7 @@ def generate_task_from_prompt(prompt):
         
         # Make the API request
         logger.info(f"Sending prompt to Ollama: {prompt[:50]}...")
-        response = requests.post(url, json=payload, timeout=10)  # Shorter timeout for faster fallback
+        response = requests.post(url, json=payload, timeout=1200)  # Shorter timeout for faster fallback
         response.raise_for_status()
         
         # Parse the response
@@ -76,7 +122,24 @@ def generate_task_from_prompt(prompt):
                 if field not in task_data:
                     logger.warning(f"Missing required field in generated task: {field}")
                     task_data[field] = "Not specified" if field != 'category_id' else 1
-                    
+            # Attempt to resolve due_date if it's still natural language
+            logger.info(f"Inferred due_date '{task_data['due_date']}'")
+            if 'due_date' in task_data:
+                original_due = task_data['due_date']
+                # If the original due date is "in a week", set it to 7 days from now
+                if original_due.lower() == "in a week":
+                    task_data['due_date'] = (datetime.datetime.now() + datetime.timedelta(days=7)).strftime('%Y-%m-%d')
+                    logger.info(f"Converted 'in a week' to '{task_data['due_date']}'")
+                else:
+                    parsed_due = compute_due_date(original_due)
+                    if parsed_due:
+                        task_data['due_date'] = parsed_due
+                        logger.info(f"Converted due_date '{original_due}' → '{parsed_due}'")
+                    else:
+                        # If parsing fails, default to 7 days from now
+                        task_data['due_date'] = (datetime.datetime.now() + datetime.timedelta(days=7)).strftime('%Y-%m-%d')
+                        logger.warning(f"Could not parse due_date: '{original_due}', defaulting to 7 days from now")
+                   
             logger.info(f"Successfully generated task details from prompt using Ollama")
             return task_data
             
@@ -164,54 +227,76 @@ def rule_based_task_extraction(prompt):
         task_data['assigned_to'] = assign_match.group(1)
     
     # Extract due date
-    date_patterns = [
-        # Format: by January 15, 2023
-        r'by\s+(\w+)\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{4})',
-        # Format: by 15 January 2023
-        r'by\s+(\d{1,2})(?:st|nd|rd|th)?\s+(\w+),?\s+(\d{4})',
-        # Format: by 2023-01-15
-        r'by\s+(\d{4})[/-](\d{1,2})[/-](\d{1,2})',
-        # Format: by 01/15/2023
-        r'by\s+(\d{1,2})[/-](\d{1,2})[/-](\d{4})',
-        # Format: by next week/month
-        r'by\s+next\s+(\w+)',
-        # Format: in 5 days/weeks
-        r'in\s+(\d+)\s+(\w+)'
-    ]
-    
-    for pattern in date_patterns:
-        match = re.search(pattern, prompt, re.I)
-        if match:
-            try:
-                if 'next' in pattern:
-                    # Handle "next week/month"
-                    time_unit = match.group(1).lower()
-                    if time_unit == 'week':
-                        due_date = datetime.now() + timedelta(days=7)
-                    elif time_unit == 'month':
-                        # Approximate a month as 30 days
-                        due_date = datetime.now() + timedelta(days=30)
-                    else:
-                        continue
-                elif 'in' in pattern:
-                    # Handle "in X days/weeks"
-                    amount = int(match.group(1))
-                    unit = match.group(2).lower()
-                    if 'day' in unit:
-                        due_date = datetime.now() + timedelta(days=amount)
-                    elif 'week' in unit:
-                        due_date = datetime.now() + timedelta(days=amount*7)
-                    else:
-                        continue
-                else:
-                    # Handle specific date formats
-                    continue  # Skip complex date parsing for the fallback
-                
-                task_data['due_date'] = due_date.strftime('%Y-%m-%d')
-                break
-            except Exception:
-                # If date parsing fails, keep the default
-                pass
+    # First check for "next Monday" or similar expressions
+    next_day_match = re.search(r'by\s+next\s+(monday|tuesday|wednesday|thursday|friday|saturday|sunday)', prompt.lower())
+    if next_day_match:
+        day_name = next_day_match.group(1).capitalize()
+        # Get today's date
+        today = datetime.now()
+        # Get today's weekday (0 = Monday, 6 = Sunday in Python's datetime)
+        today_weekday = today.weekday()
+        
+        # Convert day name to weekday number (0-6)
+        day_to_num = {
+            'Monday': 0, 'Tuesday': 1, 'Wednesday': 2, 'Thursday': 3,
+            'Friday': 4, 'Saturday': 5, 'Sunday': 6
+        }
+        target_weekday = day_to_num[day_name]
+        
+        # Calculate days until next occurrence of the target day
+        days_ahead = target_weekday - today_weekday
+        if days_ahead <= 0:  # Target day is today or earlier in the week
+            days_ahead += 7  # So we want next week's occurrence
+            
+        # Calculate the date
+        next_day_date = today + timedelta(days=days_ahead)
+        logger.info(f"Rule-based extraction: Calculated next {day_name} as {next_day_date.strftime('%Y-%m-%d')}")
+        task_data['due_date'] = next_day_date.strftime('%Y-%m-%d')
+    else:
+        # Check other date patterns
+        date_patterns = [
+            # Format: by January 15, 2023
+            r'by\s+(\w+)\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{4})',
+            # Format: by 15 January 2023
+            r'by\s+(\d{1,2})(?:st|nd|rd|th)?\s+(\w+),?\s+(\d{4})',
+            # Format: by 2023-01-15
+            r'by\s+(\d{4})[/-](\d{1,2})[/-](\d{1,2})',
+            # Format: by 01/15/2023
+            r'by\s+(\d{1,2})[/-](\d{1,2})[/-](\d{4})',
+            # Format: by next week/month
+            r'by\s+next\s+(\w+)',
+            # Format: in 5 days/weeks
+            r'in\s+(\d+)\s+(\w+)'
+        ]
+        
+        for pattern in date_patterns:
+            match = re.search(pattern, prompt, re.I)
+            if match:
+                try:
+                    due_date = None
+                    if 'next' in pattern:
+                        # Handle "next week/month"
+                        time_unit = match.group(1).lower()
+                        if time_unit == 'week':
+                            due_date = datetime.now() + timedelta(days=7)
+                        elif time_unit == 'month':
+                            # Approximate a month as 30 days
+                            due_date = datetime.now() + timedelta(days=30)
+                    elif 'in' in pattern:
+                        # Handle "in X days/weeks"
+                        amount = int(match.group(1))
+                        unit = match.group(2).lower()
+                        if 'day' in unit:
+                            due_date = datetime.now() + timedelta(days=amount)
+                        elif 'week' in unit:
+                            due_date = datetime.now() + timedelta(days=amount*7)
+                    
+                    if due_date:
+                        task_data['due_date'] = due_date.strftime('%Y-%m-%d')
+                        break
+                except Exception as e:
+                    # If date parsing fails, keep the default
+                    logger.warning(f"Error parsing date pattern: {str(e)}")
     
     logger.info(f"Rule-based extraction completed: {task_data['title']}")
     return task_data

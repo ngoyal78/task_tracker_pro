@@ -10,7 +10,7 @@ from django.views.decorators.http import require_POST
 from django.contrib import messages
 from django.db import transaction
 from django.http import HttpResponseForbidden
-from datetime import date
+from datetime import date, datetime, timedelta
 
 from .models import Task, Category, Role
 from .serializers import TaskSerializer, CategorySerializer, RoleSerializer, UserSerializer
@@ -551,8 +551,44 @@ def ai_task_create(request):
                             ai_priority = 'Medium'
                         task.priority = ai_priority
                     
-                    # Use user-provided due date if available, otherwise use AI suggestion
-                    task.due_date = form.cleaned_data.get('due_date') or task_data.get('due_date', date.today())
+                    # Check if user explicitly provided a due date or cleared it
+                    # If the form was submitted with an empty due_date field, form.cleaned_data['due_date'] will be None
+                    # If the user didn't touch the field, it will have the default value (tomorrow)
+                    user_due_date = form.cleaned_data.get('due_date')
+                    default_due_date = date.today() + timedelta(days=1)
+                    
+                    # Check if the user explicitly cleared the due date field using the clear button
+                    due_date_cleared = 'due_date_cleared' in request.POST
+                    
+                    # Check if the 'due_date' parameter was explicitly included in the POST data
+                    due_date_in_post = 'due_date' in request.POST and request.POST['due_date']
+                    
+                    if due_date_cleared:
+                        # User explicitly cleared the due date field, use AI suggestion
+                        ai_due_date = task_data.get('due_date')
+                        if ai_due_date:
+                            task.due_date = ai_due_date
+                            logger.info(f"Using AI-suggested due date (after user cleared field): {task.due_date}")
+                        else:
+                            # Default to 7 days from now if no AI suggestion
+                            task.due_date = date.today() + timedelta(days=7)
+                            logger.info(f"Using default due date (7 days) after user cleared field: {task.due_date}")
+                    elif due_date_in_post:
+                        # User explicitly set a due date
+                        task.due_date = user_due_date
+                        logger.info(f"Using user-provided due date: {task.due_date}")
+                    else:
+                        # Use AI-suggested date or default to 7 days from now
+                        ai_due_date = task_data.get('due_date')
+                        if ai_due_date:
+                            task.due_date = ai_due_date
+                            logger.info(f"Using AI-suggested due date: {task.due_date}")
+                        else:
+                            # Default to 7 days from now if no date is provided
+                            task.due_date = date.today() + timedelta(days=7)
+                            logger.info(f"Using default due date (7 days from now): {task.due_date}")
+                    
+                    logger.info(f"Setting task due date to: {task.due_date}")
                     
                     # Set default status
                     task.status = 'Not Started'

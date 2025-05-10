@@ -1,0 +1,19 @@
+# Dockerfile for Ollama service on Render
+FROM ollama/ollama:latest
+
+# Set environment variables
+ENV OLLAMA_HOST=0.0.0.0
+ENV OLLAMA_MODELS=mistral
+
+# Create directory for models
+RUN mkdir -p /root/.ollama
+
+# Expose the Ollama API port
+EXPOSE 11434
+
+# Set up an entrypoint script to pull models and start Ollama
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Run the entrypoint script
+ENTRYPOINT ["/entrypoint.sh"]

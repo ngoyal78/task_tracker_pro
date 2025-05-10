@@ -1,17 +1,18 @@
 Django>=4.2,<5.0
-gunicorn
-psycopg2-binary
-whitenoise
-dj-database-url
-python-dotenv
-python-decouple
+gunicorn>=21.0.0
+psycopg2-binary>=2.9.5
+whitenoise>=6.4.0
+dj-database-url>=1.2.0
+python-dotenv>=1.0.0
+python-decouple>=3.8
 djangorestframework==3.14.0
-twilio
-argon2-cffi  # For stronger password hashing
-pytest  # For running tests
-pytest-django  # For Django test integration
-coverage  # For test coverage reports
-django-debug-toolbar  # For development debugging
-pillow  # For image processing
-requests  # For API requests to Ollama
-openai-whisper  # Optional: For voice-to-text transcription
+twilio>=8.0.0
+argon2-cffi>=23.1.0  # For stronger password hashing
+pytest>=7.3.1  # For running tests
+pytest-django>=4.5.2  # For Django test integration
+coverage>=7.2.5  # For test coverage reports
+django-debug-toolbar>=4.1.0  # For development debugging
+pillow>=10.0.0  # For image processing
+requests>=2.30.0  # For API requests to Ollama
+openai-whisper>=20231117  # Optional: For voice-to-text transcription
+dateparser>=1.1.8  # For parsing natural language date expressions

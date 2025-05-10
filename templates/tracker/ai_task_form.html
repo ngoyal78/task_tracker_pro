@@ -8,7 +8,7 @@
   <div class="row mb-3">
     <div class="col-12">
       <nav aria-label="breadcrumb">
-        <ol class="breadcrumb bg-light p-2">
+        <ol class="breadcrumb bg-light p-2 rounded shadow-sm">
           <li class="breadcrumb-item"><a href="{% url 'dashboard' %}">Dashboard</a></li>
           <li class="breadcrumb-item active" aria-current="page">Create Task with AI</li>
         </ol>
@@ -16,115 +16,199 @@
     </div>
   </div>
 
-  <div class="card shadow-sm">
-    <div class="card-header bg-white">
-      <h2 class="mb-0 text-primary">
-        <i class="fas fa-robot me-2"></i>Create Task with AI
-      </h2>
-      <p class="text-muted mb-0">Describe your task in natural language and let AI extract the details</p>
-    </div>
-    <div class="card-body">
-      <form method="post" enctype="multipart/form-data">
-        {% csrf_token %}
-        
-        <div class="mb-4">
-          <div class="d-flex justify-content-between align-items-center mb-2">
-            <label for="{{ form.prompt.id_for_label }}" class="form-label">Task Description</label>
-            <div class="form-text">
-              {% if settings.OLLAMA_MODEL %}
-                Powered by {{ settings.OLLAMA_MODEL }}
-              {% else %}
-                AI-assisted task creation
-              {% endif %}
+  <div class="row">
+    <!-- Main Form Column -->
+    <div class="col-lg-8">
+      <div class="card shadow mb-4">
+        <div class="card-header bg-primary text-white">
+          <h2 class="mb-0">
+            <i class="fas fa-robot me-2"></i>Create Task with AI
+          </h2>
+          <p class="mb-0 mt-1 text-white-50">Describe your task in natural language and let AI extract the details</p>
+        </div>
+        <div class="card-body">
+          <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <!-- AI Input Section -->
+            <div class="border-bottom mb-4 pb-3">
+              <h4 class="mb-3 text-primary">
+                <i class="fas fa-brain me-2"></i>AI Task Description
+              </h4>
+              
+              <div class="mb-4">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <label for="{{ form.prompt.id_for_label }}" class="form-label fw-bold">
+                    <i class="fas fa-comment-alt me-1 text-primary"></i>Task Description:
+                  </label>
+                  <div class="badge bg-info text-white">
+                    {% if settings.OLLAMA_MODEL %}
+                      Powered by {{ settings.OLLAMA_MODEL }}
+                    {% else %}
+                      AI-assisted task creation
+                    {% endif %}
+                  </div>
+                </div>
+                {{ form.prompt.errors }}
+                {{ form.prompt }}
+                <div class="form-text mt-2">{{ form.prompt.help_text }}</div>
+              </div>
+              
+              <div class="mb-4">
+                <label for="{{ form.audio_file.id_for_label }}" class="form-label fw-bold">
+                  <i class="fas fa-microphone me-1 text-primary"></i>Voice Input:
+                </label>
+                {{ form.audio_file.errors }}
+                <div class="input-group">
+                  <span class="input-group-text"><i class="fas fa-microphone"></i></span>
+                  {{ form.audio_file }}
+                </div>
+                <div class="form-text mt-2">{{ form.audio_file.help_text }}</div>
+              </div>
             </div>
-          </div>
-          {{ form.prompt.errors }}
-          {{ form.prompt }}
-          <div class="form-text">{{ form.prompt.help_text }}</div>
+            
+            <!-- Optional Overrides Section -->
+            <div class="mb-4">
+              <h4 class="mb-3 text-primary">
+                <i class="fas fa-sliders-h me-2"></i>Optional Overrides
+              </h4>
+              <p class="text-muted mb-4">These fields are optional. If left blank, AI will suggest values based on your description.</p>
+              
+              <div class="row g-3">
+                <div class="col-md-6">
+                  <label for="{{ form.title.id_for_label }}" class="form-label fw-bold">
+                    <i class="fas fa-heading me-1 text-primary"></i>Title:
+                  </label>
+                  {{ form.title.errors }}
+                  {{ form.title }}
+                </div>
+                
+                <div class="col-md-6">
+                  <label for="{{ form.priority.id_for_label }}" class="form-label fw-bold">
+                    <i class="fas fa-flag me-1 text-primary"></i>Priority:
+                  </label>
+                  {{ form.priority.errors }}
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-exclamation-triangle"></i></span>
+                    {{ form.priority }}
+                  </div>
+                </div>
+              </div>
+              
+              <div class="row g-3 mt-2">
+                <div class="col-md-6">
+                  <label for="{{ form.due_date.id_for_label }}" class="form-label fw-bold">
+                    <i class="fas fa-calendar-alt me-1 text-primary"></i>Due Date:
+                    <small class="text-muted">(Optional)</small>
+                  </label>
+                  {{ form.due_date.errors }}
+                  <div class="input-group">
+                    <span class="input-group-text"><i class="fas fa-calendar"></i></span>
+                    {{ form.due_date }}
+                    <button type="button" class="btn btn-outline-secondary" id="clear-due-date">
+                      <i class="fas fa-times"></i> Clear
+                    </button>
+                  </div>
+                  <div class="form-text mt-1">
+                    <i class="fas fa-info-circle me-1"></i>{{ form.due_date.help_text }}
+                  </div>
+                </div>
+                
+                <div class="col-md-6">
+                  <label for="{{ form.assigned_to.id_for_label }}" class="form-label fw-bold">
+                    <i class="fas fa-users me-1 text-primary"></i>Assign To:
+                  </label>
+                  {{ form.assigned_to.errors }}
+                  {{ form.assigned_to }}
+                  <div class="form-text mt-2">
+                    <i class="fas fa-info-circle me-1"></i>Hold Ctrl/Cmd to select multiple users
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="d-flex justify-content-between mt-4">
+              <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary btn-lg">
+                <i class="fas fa-times me-1"></i>Cancel
+              </a>
+              <button type="submit" class="btn btn-success btn-lg">
+                <i class="fas fa-magic me-1"></i>Generate Task
+              </button>
+            </div>
+          </form>
         </div>
-        
-        <div class="mb-4">
-          <label for="{{ form.audio_file.id_for_label }}" class="form-label">
-            <i class="fas fa-microphone me-1"></i>Voice Input
-          </label>
-          {{ form.audio_file.errors }}
-          {{ form.audio_file }}
-          <div class="form-text">{{ form.audio_file.help_text }}</div>
-        </div>
-        
-        <hr class="my-4">
-        <h5 class="mb-3">Optional Overrides</h5>
-        <p class="text-muted mb-4">These fields are optional. If left blank, AI will suggest values based on your description.</p>
-        
-        <div class="row">
-          <div class="col-md-6 mb-3">
-            <label for="{{ form.title.id_for_label }}" class="form-label">Title</label>
-            {{ form.title.errors }}
-            {{ form.title }}
-          </div>
-          
-          <div class="col-md-6 mb-3">
-            <label for="{{ form.priority.id_for_label }}" class="form-label">Priority</label>
-            {{ form.priority.errors }}
-            {{ form.priority }}
-          </div>
-        </div>
-        
-        <div class="row">
-          <div class="col-md-6 mb-3">
-            <label for="{{ form.due_date.id_for_label }}" class="form-label">Due Date</label>
-            {{ form.due_date.errors }}
-            {{ form.due_date }}
-          </div>
-          
-          <div class="col-md-6 mb-3">
-            <label for="{{ form.assigned_to.id_for_label }}" class="form-label">Assign To</label>
-            {{ form.assigned_to.errors }}
-            {{ form.assigned_to }}
-            <div class="form-text">Hold Ctrl/Cmd to select multiple users</div>
-          </div>
-        </div>
-        
-        <div class="d-flex justify-content-between mt-4">
-          <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">
-            <i class="fas fa-times me-1"></i>Cancel
-          </a>
-          <button type="submit" class="btn btn-primary">
-            <i class="fas fa-magic me-1"></i>Generate Task
-          </button>
-        </div>
-      </form>
-    </div>
-  </div>
-  
-  <div class="card mt-4 shadow-sm">
-    <div class="card-header bg-white">
-      <h5 class="mb-0">
-        <i class="fas fa-lightbulb me-2 text-warning"></i>Tips for Auto Surveyor Tasks
-      </h5>
-    </div>
-    <div class="card-body">
-      <ul class="mb-3">
-        <li>Include vehicle identification (VIN, make, model) when available</li>
-        <li>Specify the location of the vehicle</li>
-        <li>Describe the damage clearly and its severity</li>
-        <li>Mention any deadlines or time constraints</li>
-        <li>Indicate priority level for urgent cases</li>
-        <li>Specify who should be assigned to the task</li>
-        <li>Example: "Survey completed for VIN WB02A1234 near Indore. Minor rear damage. Assign to Ramesh. Due tomorrow."</li>
-      </ul>
-      <div class="alert alert-info">
-        <strong>Task Categories:</strong>
-        <ul class="mb-0 mt-1">
-          <li>Initial Survey (Category 1)</li>
-          <li>Damage Assessment (Category 2)</li>
-          <li>Claims Processing (Category 3)</li>
-          <li>Final Inspection (Category 4)</li>
-        </ul>
       </div>
-      <a href="{% static 'example_prompts.md' %}" target="_blank" class="btn btn-sm btn-outline-primary">
-        <i class="fas fa-lightbulb me-1"></i>View More Example Prompts
-      </a>
+    </div>
+    
+    <!-- Tips Column -->
+    <div class="col-lg-4">
+      <div class="card shadow mb-4 border-primary">
+        <div class="card-header bg-primary text-white">
+          <h5 class="mb-0">
+            <i class="fas fa-lightbulb me-2"></i>Tips for Auto Surveyor Tasks
+          </h5>
+        </div>
+        <div class="card-body">
+          <ul class="list-group list-group-flush mb-3">
+            <li class="list-group-item">
+              <i class="fas fa-check-circle text-success me-2"></i>Include vehicle identification (VIN, make, model)
+            </li>
+            <li class="list-group-item">
+              <i class="fas fa-check-circle text-success me-2"></i>Specify the location of the vehicle
+            </li>
+            <li class="list-group-item">
+              <i class="fas fa-check-circle text-success me-2"></i>Describe the damage clearly and its severity
+            </li>
+            <li class="list-group-item">
+              <i class="fas fa-check-circle text-success me-2"></i>Mention any deadlines or time constraints
+            </li>
+            <li class="list-group-item">
+              <i class="fas fa-check-circle text-success me-2"></i>Indicate priority level for urgent cases
+            </li>
+            <li class="list-group-item">
+              <i class="fas fa-check-circle text-success me-2"></i>Specify who should be assigned to the task
+            </li>
+          </ul>
+          
+          <div class="alert alert-info">
+            <h6 class="alert-heading"><i class="fas fa-info-circle me-2"></i>Task Categories:</h6>
+            <ul class="mb-0 mt-2">
+              <li>Initial Survey (Category 1)</li>
+              <li>Damage Assessment (Category 2)</li>
+              <li>Claims Processing (Category 3)</li>
+              <li>Final Inspection (Category 4)</li>
+            </ul>
+          </div>
+        </div>
+        <div class="card-footer bg-light">
+          <h6 class="mb-3">Example Prompt:</h6>
+          <div class="bg-light p-3 rounded border">
+            <em>"Survey completed for VIN WB02A1234 near Indore. Minor rear damage. Assign to Ramesh. Due tomorrow."</em>
+          </div>
+          <div class="text-center mt-3">
+            <a href="{% static 'example_prompts.md' %}" target="_blank" class="btn btn-outline-primary">
+              <i class="fas fa-lightbulb me-1"></i>View More Example Prompts
+            </a>
+          </div>
+        </div>
+      </div>
+      
+      <div class="card shadow mb-4">
+        <div class="card-header bg-light">
+          <h5 class="mb-0">
+            <i class="fas fa-info-circle me-2"></i>How AI Task Creation Works
+          </h5>
+        </div>
+        <div class="card-body">
+          <ol class="mb-0">
+            <li class="mb-2">You describe the task in natural language</li>
+            <li class="mb-2">AI analyzes your description to extract key details</li>
+            <li class="mb-2">The system generates a structured task with appropriate fields</li>
+            <li class="mb-2">You review and confirm the generated task</li>
+            <li>The task is created and assigned to the specified users</li>
+          </ol>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -141,6 +225,28 @@
     document.querySelectorAll('input[type="file"]').forEach(function(el) {
       el.classList.add('form-control');
     });
+    
+    // Add clear button functionality for due date
+    const clearDueDateBtn = document.getElementById('clear-due-date');
+    if (clearDueDateBtn) {
+      clearDueDateBtn.addEventListener('click', function() {
+        const dueDateInput = document.getElementById('{{ form.due_date.id_for_label }}');
+        if (dueDateInput) {
+          dueDateInput.value = '';
+          // Add a hidden input to indicate the field was intentionally cleared
+          const form = dueDateInput.closest('form');
+          let hiddenInput = document.getElementById('due_date_cleared');
+          if (!hiddenInput) {
+            hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.id = 'due_date_cleared';
+            hiddenInput.name = 'due_date_cleared';
+            hiddenInput.value = 'true';
+            form.appendChild(hiddenInput);
+          }
+        }
+      });
+    }
   });
 </script>
 {% endblock %}

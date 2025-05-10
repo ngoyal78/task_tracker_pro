@@ -1,11 +1,13 @@
 # Task Tracker Pro
 
-A comprehensive task management system built with Django and Django REST Framework.
+A comprehensive task management system built with Django and Django REST Framework, featuring AI-powered task creation.
 
 ## Features
 
 - **User Authentication**: Secure login, registration, and role-based access control
 - **Task Management**: Create, view, edit, and update tasks with detailed information
+- **AI-Powered Task Creation**: Generate task details from natural language descriptions using Ollama
+- **Voice Input**: Create tasks by uploading audio recordings (with Whisper integration)
 - **Role-Based Access Control**: Different permissions for Team Members, Team Leaders, and Owners
 - **Real-time Notifications**: WhatsApp notifications for task status changes
 - **File Attachments**: Upload and manage attachments for tasks
@@ -18,8 +20,9 @@ A comprehensive task management system built with Django and Django REST Framewo
 - **Backend**: Django 4.2+, Django REST Framework
 - **Frontend**: Bootstrap 5, JavaScript
 - **Database**: SQLite (development), PostgreSQL (production)
+- **AI Integration**: Ollama for task generation, OpenAI Whisper for voice transcription
 - **Notifications**: Twilio WhatsApp API
-- **Deployment**: Render, Gunicorn, Whitenoise
+- **Deployment**: Render, Docker, Gunicorn, Whitenoise
 
 ## Installation
 
@@ -101,7 +104,7 @@ pytest
 
 ## Deployment
 
-The application is configured for deployment on Render with the included `render.yaml` file.
+The application is configured for deployment on Render with the included `render.yaml` file. For detailed deployment instructions, see [RENDER_DEPLOYMENT.md](RENDER_DEPLOYMENT.md).
 
 ## License
 
