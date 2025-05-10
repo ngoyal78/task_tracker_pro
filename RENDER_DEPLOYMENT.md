@@ -181,11 +181,39 @@ Alternatively, use the provided `create_superuser.py` script:
 
 #### Database Connection Issues
 
-If you encounter database connection issues:
+If you encounter database connection issues like the following:
 
-1. Verify that the `DATABASE_URL` environment variable is correctly set
-2. Check if your database is running and accessible
-3. Ensure your IP is allowed in the database firewall rules
+```
+psycopg2.OperationalError: could not translate host name "dpg-xxxxx" to address: Name or service not known
+django.db.utils.OperationalError: could not translate host name "dpg-xxxxx" to address: Name or service not known
+```
+
+This typically indicates a DNS resolution issue or that the database service hasn't been properly provisioned. Try these steps:
+
+1. **Verify database service creation**:
+   - In your Render dashboard, ensure the PostgreSQL database service is created and running
+   - Wait a few minutes after creating the database before deploying the web service
+   - The database hostname should be in the format `dpg-xxxxx-a.xxx.render.com`
+
+2. **Check environment variables**:
+   - Verify that the `DATABASE_URL` environment variable is correctly set in your web service
+   - The URL should be in the format: `postgres://username:password@hostname:port/database_name`
+   - You can copy this directly from the database service's "Connection" tab in the Render dashboard
+
+3. **Manual connection string setup**:
+   - If using the `fromDatabase` property in `render.yaml` isn't working, try setting the `DATABASE_URL` manually:
+     ```yaml
+     - key: DATABASE_URL
+       value: "postgres://username:password@hostname:port/database_name"
+     ```
+
+4. **Restart services**:
+   - Try restarting both the database and web service
+   - In the Render dashboard, go to each service and click "Manual Deploy" → "Clear build cache & deploy"
+
+5. **Check database logs**:
+   - Review the database logs in the Render dashboard for any initialization errors
+   - Ensure the database has completed its initial setup
 
 #### Static Files Not Loading
 
