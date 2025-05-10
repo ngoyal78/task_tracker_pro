@@ -8,8 +8,10 @@ import os
 import sys
 import json
 import requests
-from dotenv import load_dotenv
 import time
+import dateparser
+from datetime import datetime
+from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
@@ -23,34 +25,32 @@ BOLD = "\033[1m"
 RESET = "\033[0m"
 
 def print_header(text):
-    """Print a formatted header"""
     print(f"\n{BLUE}{BOLD}{'=' * 50}{RESET}")
     print(f"{BLUE}{BOLD}{text.center(50)}{RESET}")
     print(f"{BLUE}{BOLD}{'=' * 50}{RESET}\n")
 
 def print_success(text):
-    """Print a success message"""
     print(f"{GREEN}✓ {text}{RESET}")
 
 def print_warning(text):
-    """Print a warning message"""
     print(f"{YELLOW}⚠ {text}{RESET}")
 
 def print_error(text):
-    """Print an error message"""
     print(f"{RED}✗ {text}{RESET}")
 
 def print_info(text):
-    """Print an info message"""
     print(f"{BLUE}ℹ {text}{RESET}")
 
+def compute_due_date(natural_text):
+    """Convert natural date expressions like 'next Monday' to YYYY-MM-DD"""
+    parsed_date = dateparser.parse(natural_text, settings={'PREFER_DATES_FROM': 'future'})
+    if parsed_date:
+        return parsed_date.strftime('%Y-%m-%d')
+    return None
+
 def check_ollama_running():
-    """Check if Ollama is running"""
     print_info("Checking if Ollama is running...")
-    
-    # Get Ollama base URL from environment or use default
     base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-    
     try:
         response = requests.get(f"{base_url}/api/version", timeout=5)
         if response.status_code == 200:
@@ -69,19 +69,14 @@ def check_ollama_running():
         return False
 
 def check_model_availability():
-    """Check if the required model is available"""
     print_info("Checking model availability...")
-    
-    # Get model name from environment or use default
     model_name = os.getenv("OLLAMA_MODEL", "mistral")
     base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-    
     try:
         response = requests.get(f"{base_url}/api/tags", timeout=5)
         if response.status_code == 200:
             models = response.json().get('models', [])
             model_names = [model.get('name') for model in models]
-            
             if model_name in model_names:
                 print_success(f"Model '{model_name}' is available")
                 return True
@@ -98,32 +93,32 @@ def check_model_availability():
         return False
 
 def test_task_generation():
-    """Test generating a task from a prompt"""
     print_info("Testing task generation...")
-    
-    # Get configuration from environment
     model_name = os.getenv("OLLAMA_MODEL", "mistral")
     base_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434")
-    
-    # Sample prompt
-    prompt = "Create a weekly report on sales performance by Friday."
-    
-    # System prompt to guide the model
-    system_prompt = """
-    You are a task creation assistant. Based on the user's description, extract the following details:
-    - title: A concise title for the task
-    - description: A detailed description of what needs to be done
-    - priority: Either 'Low', 'Medium', or 'High'
-    - category_id: Suggest a category ID (1 for Development, 2 for Design, 3 for Marketing, 4 for Operations)
-    - due_date: A reasonable due date in YYYY-MM-DD format
-    
-    Format your response as a JSON object with these fields.
+
+    prompt = "Routine check for VIN MH12DE1433 at Pune scheduled next Monday"
+
+    system_prompt = f"""
+    You are an intelligent assistant for an automotive field task tracker system that logs and manages tasks related to vehicle surveys, diagnostics, and inspections.
+
+    When given a prompt that may mention vehicles (e.g., VINs), locations, times, or maintenance actions, extract and format the following fields:
+
+    - title: A concise summary of the task (e.g., "Routine Inspection - MH12DE1433")
+    - description: A detailed description of what needs to be done, including vehicle info, location, and schedule
+    - priority: 'High' if safety-related or urgent, otherwise 'Medium' or 'Low'
+    - category_id: Use:
+        1 for Diagnostics/Engineering,
+        2 for Survey/Inspection,
+        3 for Data Collection,
+        4 for Logistics/Operations
+    - due_date: Convert relative expressions like 'next Monday' into a date string in YYYY-MM-DD format, using today’s date as {time.strftime('%Y-%m-%d')}.
+
+    Always format your response as a JSON object with these fields.
     """
-    
+
     try:
         print_info(f"Sending prompt to {model_name}: '{prompt}'")
-        
-        # Prepare the API request
         url = f"{base_url}/api/generate"
         payload = {
             "model": model_name,
@@ -132,24 +127,31 @@ def test_task_generation():
             "stream": False,
             "format": "json"
         }
-        
-        # Make the API request
+
         start_time = time.time()
-        response = requests.post(url, json=payload, timeout=30)
+        response = requests.post(url, json=payload, timeout=180)
         end_time = time.time()
-        
+
         if response.status_code == 200:
             result = response.json()
             generated_text = result.get('response', '')
-            
-            # Try to parse the response as JSON
+
             try:
                 task_data = json.loads(generated_text)
-                
-                # Check if all required fields are present
+
                 required_fields = ['title', 'description', 'priority', 'category_id', 'due_date']
                 missing_fields = [field for field in required_fields if field not in task_data]
-                
+
+                # Attempt to resolve due_date if it's still natural language
+                if 'due_date' in task_data:
+                    original_due = task_data['due_date']
+                    parsed_due = compute_due_date(original_due)
+                    if parsed_due:
+                        task_data['due_date'] = parsed_due
+                        print_info(f"Converted due_date '{original_due}' → '{parsed_due}'")
+                    else:
+                        print_warning(f"Could not parse due_date: '{original_due}'")
+
                 if missing_fields:
                     print_warning(f"Generated task is missing fields: {', '.join(missing_fields)}")
                 else:
@@ -157,6 +159,7 @@ def test_task_generation():
                     print_info("Generated task:")
                     print(json.dumps(task_data, indent=2))
                     return True
+
             except json.JSONDecodeError:
                 print_warning("Could not parse response as JSON")
                 print_info("Raw response:")
@@ -171,25 +174,21 @@ def test_task_generation():
         return False
 
 def main():
-    """Main function to run all tests"""
     print_header("Ollama Integration Test")
-    
-    # Check if Ollama is running
+
     if not check_ollama_running():
         return False
-    
-    # Check if the model is available
+
     if not check_model_availability():
         return False
-    
-    # Test task generation
+
     if not test_task_generation():
         return False
-    
+
     print_header("All Tests Passed!")
     print_success("Ollama is properly configured and working with Task Tracker Pro")
     print_info("You can now use the AI-powered task creation feature")
-    
+
     return True
 
 if __name__ == "__main__":
